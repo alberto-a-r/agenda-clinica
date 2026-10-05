@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:17
+    # PostgreSQL 17 con la extensión pgvector para la búsqueda semántica
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: agenda
       POSTGRES_PASSWORD: agenda
