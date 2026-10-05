@@ -4,19 +4,22 @@ import { revalidatePath } from "next/cache";
 import { citasDePaciente, obtenerPaciente, pool } from "@/lib/db";
 import { obtenerHistorialLegado, obtenerPacientesLegado } from "@/lib/legacy";
 import { resumirHistorial, type ResultadoResumen } from "@/lib/resumen";
+import { buscarEnHistorial, indexarHistorial, type ResultadoBusqueda } from "@/lib/busqueda";
 
 // NOTA: proyecto de demostración sin autenticación. En un sistema real cada
 // Server Action debe verificar sesión y permisos antes de tocar datos clínicos.
 
 export async function sincronizarPacientes(): Promise<void> {
   const pacientes = await obtenerPacientesLegado();
+  // Se leen los historiales antes de abrir la transacción para no mantenerla abierta en la red
+  const historiales = await Promise.all(pacientes.map((p) => obtenerHistorialLegado(p.legacyId)));
 
   // Upsert por legacy_id: re-sincronizar actualiza en vez de duplicar.
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    for (const p of pacientes) {
-      await client.query(
+    for (const [i, p] of pacientes.entries()) {
+      const { rows } = await client.query<{ id: number }>(
         `INSERT INTO pacientes (legacy_id, rut, nombre, apellidos, fecha_nacimiento, prevision)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (legacy_id) DO UPDATE SET
@@ -25,9 +28,11 @@ export async function sincronizarPacientes(): Promise<void> {
            apellidos = EXCLUDED.apellidos,
            fecha_nacimiento = EXCLUDED.fecha_nacimiento,
            prevision = EXCLUDED.prevision,
-           sincronizado_en = now()`,
+           sincronizado_en = now()
+         RETURNING id`,
         [p.legacyId, p.rut, p.nombre, p.apellidos, p.fechaNacimiento, p.prevision],
       );
+      await indexarHistorial(client, rows[0].id, historiales[i]);
     }
     await client.query("COMMIT");
   } catch (error) {
@@ -73,4 +78,15 @@ export async function generarResumen(
   ]);
 
   return resumirHistorial(paciente, historial, citas);
+}
+
+export async function buscar(
+  _estadoPrevio: ResultadoBusqueda | null,
+  formData: FormData,
+): Promise<ResultadoBusqueda> {
+  const pregunta = String(formData.get("pregunta") ?? "").trim();
+  const pacienteId = Number(formData.get("pacienteId")) || null;
+  if (pregunta.length < 3) return { ok: false, error: "Escribe una pregunta más larga." };
+
+  return buscarEnHistorial(pregunta, pacienteId);
 }
