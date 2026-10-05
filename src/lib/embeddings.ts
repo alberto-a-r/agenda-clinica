@@ -19,9 +19,15 @@ async function embed(textos: string[]): Promise<number[][]> {
   return salida.tolist() as number[][];
 }
 
+// El legado escribe todo en mayúsculas; en minúsculas el modelo recupera mejor
+// (ver scripts/eval-busqueda.mjs).
+const normalizar = (texto: string) => texto.toLowerCase();
+
 // e5 espera prefijos distintos para documentos y consultas
-export const embedFragmentos = (textos: string[]) => embed(textos.map((t) => `passage: ${t}`));
-export const embedConsulta = async (texto: string) => (await embed([`query: ${texto}`]))[0];
+export const embedFragmentos = (textos: string[]) =>
+  embed(textos.map((t) => `passage: ${normalizar(t)}`));
+export const embedConsulta = async (texto: string) =>
+  (await embed([`query: ${normalizar(texto)}`]))[0];
 
 /** Formato literal de pgvector: "[0.1,0.2,...]" */
 export const aVectorSql = (v: number[]) => `[${v.join(",")}]`;
