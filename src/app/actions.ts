@@ -38,3 +38,22 @@ export async function sincronizarPacientes(): Promise<void> {
 
   revalidatePath("/pacientes");
 }
+
+export async function crearCita(formData: FormData): Promise<void> {
+  const pacienteId = Number(formData.get("pacienteId"));
+  const inicio = String(formData.get("inicio") ?? "");
+  const especialidad = String(formData.get("especialidad") ?? "").trim();
+  const motivo = String(formData.get("motivo") ?? "").trim() || null;
+
+  if (!pacienteId || !inicio || !especialidad) {
+    throw new Error("Faltan datos para crear la cita.");
+  }
+
+  await pool.query(
+    "INSERT INTO citas (paciente_id, inicio, especialidad, motivo) VALUES ($1, $2, $3, $4)",
+    [pacienteId, new Date(inicio), especialidad, motivo],
+  );
+
+  revalidatePath("/");
+  revalidatePath(`/pacientes/${pacienteId}`);
+}
