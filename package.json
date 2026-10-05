@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db": "docker compose up -d db",
+    "legacy": "node legacy-mock/server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
