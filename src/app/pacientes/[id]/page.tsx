@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { ResumenIA } from "./resumen-ia";
 import { citasDePaciente, obtenerPaciente } from "@/lib/db";
 import { obtenerHistorialLegado } from "@/lib/legacy";
 
@@ -25,6 +26,8 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           {paciente.fecha_nacimiento} · código legado {paciente.legacy_id}
         </p>
       </section>
+
+      <ResumenIA pacienteId={paciente.id} />
 
       <section>
         <h2 className="mb-2 text-xl font-semibold">Historial (sistema legado)</h2>
