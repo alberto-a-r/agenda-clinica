@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db": "docker compose up -d db",
-    "legacy": "node legacy-mock/server.mjs"
+    "legacy": "node legacy-mock/server.mjs",
+    "eval:busqueda": "node scripts/eval-busqueda.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

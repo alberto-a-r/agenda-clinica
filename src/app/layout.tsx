@@ -30,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="font-semibold">Agenda Clínica</span>
             <Link href="/" className="hover:underline">Citas</Link>
             <Link href="/pacientes" className="hover:underline">Pacientes</Link>
+            <Link href="/buscar" className="hover:underline">Buscar</Link>
             <span className="ml-auto text-xs opacity-60">Datos ficticios</span>
           </nav>
         </header>
