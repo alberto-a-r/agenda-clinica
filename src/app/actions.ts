@@ -1,0 +1,40 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { pool } from "@/lib/db";
+import { obtenerPacientesLegado } from "@/lib/legacy";
+
+// NOTA: proyecto de demostración sin autenticación. En un sistema real cada
+// Server Action debe verificar sesión y permisos antes de tocar datos clínicos.
+
+export async function sincronizarPacientes(): Promise<void> {
+  const pacientes = await obtenerPacientesLegado();
+
+  // Upsert por legacy_id: re-sincronizar actualiza en vez de duplicar.
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    for (const p of pacientes) {
+      await client.query(
+        `INSERT INTO pacientes (legacy_id, rut, nombre, apellidos, fecha_nacimiento, prevision)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (legacy_id) DO UPDATE SET
+           rut = EXCLUDED.rut,
+           nombre = EXCLUDED.nombre,
+           apellidos = EXCLUDED.apellidos,
+           fecha_nacimiento = EXCLUDED.fecha_nacimiento,
+           prevision = EXCLUDED.prevision,
+           sincronizado_en = now()`,
+        [p.legacyId, p.rut, p.nombre, p.apellidos, p.fechaNacimiento, p.prevision],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  revalidatePath("/pacientes");
+}
