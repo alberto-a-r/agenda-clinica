@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { pool } from "@/lib/db";
-import { obtenerPacientesLegado } from "@/lib/legacy";
+import { citasDePaciente, obtenerPaciente, pool } from "@/lib/db";
+import { obtenerHistorialLegado, obtenerPacientesLegado } from "@/lib/legacy";
+import { resumirHistorial, type ResultadoResumen } from "@/lib/resumen";
 
 // NOTA: proyecto de demostración sin autenticación. En un sistema real cada
 // Server Action debe verificar sesión y permisos antes de tocar datos clínicos.
@@ -56,4 +57,20 @@ export async function crearCita(formData: FormData): Promise<void> {
 
   revalidatePath("/");
   revalidatePath(`/pacientes/${pacienteId}`);
+}
+
+export async function generarResumen(
+  _estadoPrevio: ResultadoResumen | null,
+  formData: FormData,
+): Promise<ResultadoResumen> {
+  const pacienteId = Number(formData.get("pacienteId"));
+  const paciente = await obtenerPaciente(pacienteId);
+  if (!paciente) return { ok: false, error: "Paciente no encontrado." };
+
+  const [historial, citas] = await Promise.all([
+    obtenerHistorialLegado(paciente.legacy_id),
+    citasDePaciente(pacienteId),
+  ]);
+
+  return resumirHistorial(paciente, historial, citas);
 }
